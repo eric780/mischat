@@ -3,7 +3,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 // API key for google translate
-var googleAPIkey = "AIzaSyBedjB_f7Wyq_WQ8W3RZ0UsC36cLp9R0Os";
+var yandexAPIkey = "trnsl.1.1.20150919T183321Z.d9cbecfd657d3645.6863667a9c7e61e4ebb897d5dbc0cd50503ec027";
 
 app.get('/', function(request, response){
 	response.sendFile(__dirname + '/index.html');
@@ -12,7 +12,7 @@ app.get('/', function(request, response){
 io.on('connection', function(socket){
 	console.log('a user connected');
 
-	// receive a message
+	// receive a messagemsg
 	socket.on('chat message', function(msg){
 		console.log('message: ' + msg);
 
@@ -20,7 +20,7 @@ io.on('connection', function(socket){
 		
 
 
-		io.emit('chat message', msg);
+		io.emit('chat message', );
 	});
 
 	socket.on('disconnect', function(){
