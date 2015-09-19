@@ -2,8 +2,10 @@ var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
-// API key for google translate
+// API key for yandex
 var yandexAPIkey = "trnsl.1.1.20150919T183321Z.d9cbecfd657d3645.6863667a9c7e61e4ebb897d5dbc0cd50503ec027";
+// API key for Big Huge Thesaurus
+var bhtAPIkey = 9c260c0a82ebe7df7168908355d7b885;
 
 app.get('/', function(request, response){
 	response.sendFile(__dirname + '/index.html');
