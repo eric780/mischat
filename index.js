@@ -19,46 +19,54 @@ app.get('/', function(request, response){
 	response.sendFile(__dirname + '/index.html');
 });
 
-function handleChatMessage(languageIndex, srclang, msg, callbackfunc) {
-	console.log("================================");
-	// terminate if hit all languages
-	if (languageIndex >= languages.length){ 
-		console.log("hit terminal condition");
-		//io.emit('chat message', msg);
-		callbackfunc(msg);
-		return msg; 
-	}
-	// get language information and key
-	var destlang = languages[languageIndex];
+// given src/target language codes, and message, 
+// returns the resulting translation as in a callback
+function convertMessage(srclang, targetlang, msg, callback){
 	var translateoptions = {
-			key: yandexAPIkey,
-			lang: srclang + '-' + destlang,
-			text: [msg] // pass in an array of the original untranslated message
-		};
+		key: yandexAPIkey,
+		lang: srclang + '-' + targetlang,
+		text: [msg] // pass in an array of the original untranslated message	
+	};
 
 	// build request URL
-	var requestURL = "https://translate.yandex.net/api/v1.5/tr.json/translate?" 
-		+ querystring.stringify(translateoptions);
+	var requestURL = "https://translate.yandex.net/api/v1.5/tr.json/translate?" + querystring.stringify(translateoptions);
 	console.log("request url: " + requestURL);
 
 	// send HTTPS Get request to Yandex
-	var translatedMsg;
 	console.log('sending request to yandex');
+
 	https.get(requestURL, function(response){
 		console.log('response received');
 		// response comes in a binary stream
 		response.on('data', function(data){
 			process.stdout.write(data);
+			console.log(''); //newline
 			var decoded_data = JSON.parse(data.toString('utf8')); // decode response
-			console.log("== " + decoded_data + " DECODED DATA");			
-			translatedMsg = decoded_data.text[0];
-			console.log("== " + translatedMsg + " DECODED DATA");
+			//translatedMsg = decoded_data.text[0];
 
 			console.log(decoded_data.text);
-			// recursive call
-			return handleChatMessage(languageIndex+1, destlang, translatedMsg, callbackfunc);
+
+			callback(decoded_data.text[0]);
 		});
 	});
+}
+
+function handleChatMessage(languageIndex, srclang, msg) {
+	console.log("================================");
+	// terminate if hit all languages
+	if (languageIndex >= languages.length){ 
+		io.emit('chat message', msg);
+		return;
+	}
+	else{
+		// get language information and key
+		var destlang = languages[languageIndex];
+
+		// send HTTPS Get request to Yandex
+		convertMessage(srclang, destlang, msg, function(translatedMsg){
+			return handleChatMessage(languageIndex+1, destlang, translatedMsg);	
+		});
+	}
 
 }
 
@@ -70,18 +78,9 @@ io.on('connection', function(socket){
 	// receive a message
 	socket.on('chat message', function(msg){
 		console.log('message: ' + msg);
-		handleChatMessage(0, "en", msg, 
-			function (emitMessedUpMessage) {
-				console.log('~~~~~~~~inside callback');
-				io.emit('chat message', emitMessedUpMessage);
-				return;
-			});
-		// send the messed up message to all users
-		//io.emit('chat message', messedUpMessage);
-		io.emit('chat message', "THIS IS A TEST MESSAGE");
-		console.log(decoded_data.text);	
+		handleChatMessage(0, "en", msg);
 	});
-	console.log('READY TO DISCONNECT');
+
 	socket.on('disconnect', function(){
 		console.log('a user disconnected');
 	});
