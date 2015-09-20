@@ -64,8 +64,8 @@ function pickWord(msg) {
 		word = taggedWord[0];
 		var tag = taggedWord[1];
 		console.log(word + " /" + tag);
-		if (tag === 'JJ' || tag === 'JJR' || tag === 'JJS' || tag === 'NN' || tag === 'NNS' || 
-				tag === 'VB' || tag === 'VBD' || tag === 'VBN' || tag === 'VBP' || tag === 'VBZ') {
+		if (tag === 'JJ' || tag === 'JJR' || tag === 'JJS' || tag === 'NN' || 
+				tag === 'VB' || tag === 'VBD' || tag === 'VBP') {
 			break;
 		}
 	}
