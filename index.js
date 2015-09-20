@@ -101,7 +101,7 @@ function randomSynonym(msg, callback) {
 			var json = JSON.parse(s);
 			callback(replaceWord(msg, json, word));
 		})
-		if (response.statusCode == 404) {
+		if (response.statusCode != 200) {
 			callback(msg);
 		}
 	});
