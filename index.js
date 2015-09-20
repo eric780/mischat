@@ -8,9 +8,12 @@ var server = http.Server(app);
 var io = require('socket.io')(server);
 var querystring = require('querystring');
 var languages = ["fr", "de", "ja", "ar", "ru", "en"];
+var pos = require('pos');
 
 // API key for translate
 var yandexAPIkey = "trnsl.1.1.20150919T183321Z.d9cbecfd657d3645.6863667a9c7e61e4ebb897d5dbc0cd50503ec027";
+// API key for Big Huge Thesaurus
+var bhtAPIkey = "9c260c0a82ebe7df7168908355d7b885";
 
 //----------------------- useful functions ------------------------------------
 
@@ -51,6 +54,59 @@ function convertMessage(srclang, targetlang, msg, callback){
 	});
 }
 
+function pickWord(msg) {
+	var words = new pos.Lexer().lex(msg);
+	var tagger = new pos.Tagger();
+	var taggedWords = tagger.tag(words);
+	var word;
+	for (i = taggedWords.length - 1; i >= 0; i--) {
+		var taggedWord = taggedWords[i];
+		word = taggedWord[0];
+		var tag = taggedWord[1];
+		console.log(word + " /" + tag);
+		if (tag === 'JJ' || tag === 'JJR' || tag === 'JJS' || tag === 'NN' || tag === 'NNS' || 
+				tag === 'VB' || tag === 'VBD' || tag === 'VBN' || tag === 'VBP' || tag === 'VBZ') {
+			break;
+		}
+	}
+	return word;
+}
+
+function replaceWord(msg, json, word) {
+	if (json.verb) { 
+		return msg.replace(word, json.verb.syn[json.verb.syn.length-1]);
+	} else if (json.adjective) {
+		return msg.replace(word, json.adjective.syn[json.adjective.syn.length-1]);
+	} else if (json.noun) {
+		return msg.replace(word, json.noun.syn[json.noun.syn.length-1]);
+	} else {
+		return msg;
+	}
+}
+
+function randomSynonym(msg, callback) {
+	msg = msg.toLowerCase();
+	var word = pickWord(msg);
+	requestURL = "http://words.bighugelabs.com/api/2/" + bhtAPIkey + "/" + word + "/json";
+	console.log("request url: " + requestURL);
+	console.log('sending request to Big Huge Thesaurus');
+
+	http.get(requestURL, function(response) {
+		console.log('response received');
+
+		var s = '';
+		response.on('data', function(data) {
+			s += data;
+			console.log(s);
+			var json = JSON.parse(s);
+			callback(replaceWord(msg, json, word));
+		})
+		if (response.statusCode == 404) {
+			callback(msg);
+		}
+	});
+}
+
 function handleChatMessage(languageIndex, srclang, msg) {
 	console.log("================================");
 	// terminate if hit all languages
@@ -67,7 +123,6 @@ function handleChatMessage(languageIndex, srclang, msg) {
 			return handleChatMessage(languageIndex+1, destlang, translatedMsg);	
 		});
 	}
-
 }
 
 //-------------------------- on connection ------------------------------------
@@ -78,7 +133,9 @@ io.on('connection', function(socket){
 	// receive a message
 	socket.on('chat message', function(msg){
 		console.log('message: ' + msg);
-		handleChatMessage(0, "en", msg);
+		randomSynonym(msg, function (result) {
+			handleChatMessage(0, "en", result);
+		})
 	});
 
 	socket.on('disconnect', function(){
